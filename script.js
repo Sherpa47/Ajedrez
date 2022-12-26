@@ -1,1041 +1,1436 @@
-"use strict";
-console.clear();
-let PIECE_DIR_CALC = 0;
-class Utils {
-    static colToInt(col) {
-        return Board.COLS.indexOf(col);
-    }
-    static rowToInt(row) {
-        return Board.ROWS.indexOf(row);
-    }
-    static intToCol(int) {
-        return Board.COLS[int];
-    }
-    static intToRow(int) {
-        return Board.ROWS[int];
-    }
-    static getPositionsFromShortCode(shortCode) {
-        const positions = Utils.getInitialPiecePositions();
-        const overrides = {};
-        const defaultPositionMode = shortCode.charAt(0) === "X";
-        if (defaultPositionMode) {
-            shortCode = shortCode.slice(1);
-        }
-        shortCode.split(",").forEach((string) => {
-            const promoted = string.charAt(0) === "P";
-            if (promoted) {
-                string = string.slice(1);
-            }
-            if (defaultPositionMode) {
-                const inactive = string.length === 3;
-                const id = string.slice(0, 2);
-                const col = inactive ? undefined : string.charAt(2);
-                const row = inactive ? undefined : string.charAt(3);
-                const moves = string.charAt(4) || "1";
-                overrides[id] = {
-                    col,
-                    row,
-                    active: !inactive,
-                    _moves: parseInt(moves),
-                    _promoted: promoted,
-                };
-            }
-            else {
-                const moved = string.length >= 4;
-                const id = string.slice(0, 2);
-                const col = string.charAt(moved ? 2 : 0);
-                const row = string.charAt(moved ? 3 : 1);
-                const moves = string.charAt(4) || moved ? "1" : "0";
-                overrides[id] = { col, row, active: true, _moves: parseInt(moves), _promoted: promoted };
-            }
-        });
-        for (let id in positions) {
-            if (overrides[id]) {
-                positions[id] = overrides[id];
-            }
-            else {
-                positions[id] = defaultPositionMode ? positions[id] : { active: false };
-            }
-        }
-        return positions;
-    }
-    static getInitialBoardPieces(parent, pieces) {
-        const boardPieces = {};
-        const container = document.createElement("div");
-        container.className = "pieces";
-        parent.appendChild(container);
-        for (let pieceId in pieces) {
-            const boardPiece = document.createElement("div");
-            boardPiece.className = `piece ${pieces[pieceId].data.player.toLowerCase()}`;
-            boardPiece.innerHTML = pieces[pieceId].shape();
-            container.appendChild(boardPiece);
-            boardPieces[pieceId] = boardPiece;
-        }
-        return boardPieces;
-    }
-    static getInitialBoardTiles(parent, handler) {
-        const tiles = { 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {}, 8: {} };
-        const board = document.createElement("div");
-        board.className = "board";
-        parent.appendChild(board);
-        for (let i = 0; i < 8; i++) {
-            const row = document.createElement("div");
-            row.className = "row";
-            board.appendChild(row);
-            for (let j = 0; j < 8; j++) {
-                const tile = document.createElement("button");
-                tile.className = "tile";
-                const r = Utils.intToRow(i);
-                const c = Utils.intToCol(j);
-                tile.addEventListener("click", () => handler({ row: r, col: c }));
-                row.appendChild(tile);
-                tiles[r][c] = tile;
-            }
-        }
-        return tiles;
-    }
-    static getInitialBoardState(construct = () => undefined) {
-        const blankRow = () => ({
-            A: construct(),
-            B: construct(),
-            C: construct(),
-            D: construct(),
-            E: construct(),
-            F: construct(),
-            G: construct(),
-            H: construct(),
-        });
-        return {
-            1: Object.assign({}, blankRow()),
-            2: Object.assign({}, blankRow()),
-            3: Object.assign({}, blankRow()),
-            4: Object.assign({}, blankRow()),
-            5: Object.assign({}, blankRow()),
-            6: Object.assign({}, blankRow()),
-            7: Object.assign({}, blankRow()),
-            8: Object.assign({}, blankRow()),
-        };
-    }
-    static getInitialPiecePositions() {
-        return {
-            A8: { active: true, row: "8", col: "A" },
-            B8: { active: true, row: "8", col: "B" },
-            C8: { active: true, row: "8", col: "C" },
-            D8: { active: true, row: "8", col: "D" },
-            E8: { active: true, row: "8", col: "E" },
-            F8: { active: true, row: "8", col: "F" },
-            G8: { active: true, row: "8", col: "G" },
-            H8: { active: true, row: "8", col: "H" },
-            A7: { active: true, row: "7", col: "A" },
-            B7: { active: true, row: "7", col: "B" },
-            C7: { active: true, row: "7", col: "C" },
-            D7: { active: true, row: "7", col: "D" },
-            E7: { active: true, row: "7", col: "E" },
-            F7: { active: true, row: "7", col: "F" },
-            G7: { active: true, row: "7", col: "G" },
-            H7: { active: true, row: "7", col: "H" },
-            A2: { active: true, row: "2", col: "A" },
-            B2: { active: true, row: "2", col: "B" },
-            C2: { active: true, row: "2", col: "C" },
-            D2: { active: true, row: "2", col: "D" },
-            E2: { active: true, row: "2", col: "E" },
-            F2: { active: true, row: "2", col: "F" },
-            G2: { active: true, row: "2", col: "G" },
-            H2: { active: true, row: "2", col: "H" },
-            A1: { active: true, row: "1", col: "A" },
-            B1: { active: true, row: "1", col: "B" },
-            C1: { active: true, row: "1", col: "C" },
-            D1: { active: true, row: "1", col: "D" },
-            E1: { active: true, row: "1", col: "E" },
-            F1: { active: true, row: "1", col: "F" },
-            G1: { active: true, row: "1", col: "G" },
-            H1: { active: true, row: "1", col: "H" },
-        };
-    }
-    static getInitialPieces() {
-        return {
-            A8: new Piece({ id: "A8", player: "BLACK", type: "ROOK" }),
-            B8: new Piece({ id: "B8", player: "BLACK", type: "KNIGHT" }),
-            C8: new Piece({ id: "C8", player: "BLACK", type: "BISHOP" }),
-            D8: new Piece({ id: "D8", player: "BLACK", type: "QUEEN" }),
-            E8: new Piece({ id: "E8", player: "BLACK", type: "KING" }),
-            F8: new Piece({ id: "F8", player: "BLACK", type: "BISHOP" }),
-            G8: new Piece({ id: "G8", player: "BLACK", type: "KNIGHT" }),
-            H8: new Piece({ id: "H8", player: "BLACK", type: "ROOK" }),
-            A7: new Piece({ id: "A7", player: "BLACK", type: "PAWN" }),
-            B7: new Piece({ id: "B7", player: "BLACK", type: "PAWN" }),
-            C7: new Piece({ id: "C7", player: "BLACK", type: "PAWN" }),
-            D7: new Piece({ id: "D7", player: "BLACK", type: "PAWN" }),
-            E7: new Piece({ id: "E7", player: "BLACK", type: "PAWN" }),
-            F7: new Piece({ id: "F7", player: "BLACK", type: "PAWN" }),
-            G7: new Piece({ id: "G7", player: "BLACK", type: "PAWN" }),
-            H7: new Piece({ id: "H7", player: "BLACK", type: "PAWN" }),
-            A2: new Piece({ id: "A2", player: "WHITE", type: "PAWN" }),
-            B2: new Piece({ id: "B2", player: "WHITE", type: "PAWN" }),
-            C2: new Piece({ id: "C2", player: "WHITE", type: "PAWN" }),
-            D2: new Piece({ id: "D2", player: "WHITE", type: "PAWN" }),
-            E2: new Piece({ id: "E2", player: "WHITE", type: "PAWN" }),
-            F2: new Piece({ id: "F2", player: "WHITE", type: "PAWN" }),
-            G2: new Piece({ id: "G2", player: "WHITE", type: "PAWN" }),
-            H2: new Piece({ id: "H2", player: "WHITE", type: "PAWN" }),
-            A1: new Piece({ id: "A1", player: "WHITE", type: "ROOK" }),
-            B1: new Piece({ id: "B1", player: "WHITE", type: "KNIGHT" }),
-            C1: new Piece({ id: "C1", player: "WHITE", type: "BISHOP" }),
-            D1: new Piece({ id: "D1", player: "WHITE", type: "QUEEN" }),
-            E1: new Piece({ id: "E1", player: "WHITE", type: "KING" }),
-            F1: new Piece({ id: "F1", player: "WHITE", type: "BISHOP" }),
-            G1: new Piece({ id: "G1", player: "WHITE", type: "KNIGHT" }),
-            H1: new Piece({ id: "H1", player: "WHITE", type: "ROOK" }),
-        };
-    }
-}
-class Shape {
-    static shape(player, piece) {
-        return `<svg class="${player}" width="170" height="170" viewBox="0 0 170 170" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <use href="#${piece}" />
-    </svg>`;
-    }
-    static shapeBishop(player) {
-        return Shape.shape(player, "bishop");
-    }
-    static shapeKing(player) {
-        return Shape.shape(player, "king");
-    }
-    static shapeKnight(player) {
-        return Shape.shape(player, "knight");
-    }
-    static shapePawn(player) {
-        return Shape.shape(player, "pawn");
-    }
-    static shapeQueen(player) {
-        return Shape.shape(player, "queen");
-    }
-    static shapeRook(player) {
-        return Shape.shape(player, "rook");
-    }
-}
-class Constraints {
-    static generate(args, resultingChecks) {
-        let method;
-        const { piecePositions, piece } = args;
-        if (piecePositions[piece.data.id].active) {
-            switch (piece.data.type) {
-                case "BISHOP":
-                    method = Constraints.constraintsBishop;
-                    break;
-                case "KING":
-                    method = Constraints.constraintsKing;
-                    break;
-                case "KNIGHT":
-                    method = Constraints.constraintsKnight;
-                    break;
-                case "PAWN":
-                    method = Constraints.constraintsPawn;
-                    break;
-                case "QUEEN":
-                    method = Constraints.constraintsQueen;
-                    break;
-                case "ROOK":
-                    method = Constraints.constraintsRook;
-                    break;
-            }
-        }
-        const result = method ? method(args) : { moves: [], captures: [] };
-        if (resultingChecks) {
-            const moveIndex = args.moveIndex + 1;
-            result.moves = result.moves.filter((location) => !resultingChecks({ piece, location, capture: false, moveIndex }).length);
-            result.captures = result.captures.filter((location) => !resultingChecks({ piece, location, capture: true, moveIndex }).length);
-        }
-        return result;
-    }
-    static constraintsBishop(args) {
-        return Constraints.constraintsDiagonal(args);
-    }
-    static constraintsDiagonal(args) {
-        const response = { moves: [], captures: [] };
-        const { piece } = args;
-        Constraints.runUntil(piece.dirNW.bind(piece), response, args);
-        Constraints.runUntil(piece.dirNE.bind(piece), response, args);
-        Constraints.runUntil(piece.dirSW.bind(piece), response, args);
-        Constraints.runUntil(piece.dirSE.bind(piece), response, args);
-        return response;
-    }
-    static constraintsKing(args) {
-        const { piece, kingCastles, piecePositions } = args;
-        const moves = [];
-        const captures = [];
-        const locations = [
-            piece.dirN(1, piecePositions),
-            piece.dirNE(1, piecePositions),
-            piece.dirE(1, piecePositions),
-            piece.dirSE(1, piecePositions),
-            piece.dirS(1, piecePositions),
-            piece.dirSW(1, piecePositions),
-            piece.dirW(1, piecePositions),
-            piece.dirNW(1, piecePositions),
-        ];
-        if (kingCastles) {
-            const castles = kingCastles(piece);
-            castles.forEach((position) => moves.push(position));
-        }
-        locations.forEach((location) => {
-            const value = Constraints.relationshipToTile(location, args);
-            if (value === "BLANK") {
-                moves.push(location);
-            }
-            else if (value === "ENEMY") {
-                captures.push(location);
-            }
-        });
-        return { moves, captures };
-    }
-    static constraintsKnight(args) {
-        const { piece, piecePositions } = args;
-        const moves = [];
-        const captures = [];
-        const locations = [
-            piece.dir(1, 2, piecePositions),
-            piece.dir(1, -2, piecePositions),
-            piece.dir(2, 1, piecePositions),
-            piece.dir(2, -1, piecePositions),
-            piece.dir(-1, 2, piecePositions),
-            piece.dir(-1, -2, piecePositions),
-            piece.dir(-2, 1, piecePositions),
-            piece.dir(-2, -1, piecePositions),
-        ];
-        locations.forEach((location) => {
-            const value = Constraints.relationshipToTile(location, args);
-            if (value === "BLANK") {
-                moves.push(location);
-            }
-            else if (value === "ENEMY") {
-                captures.push(location);
-            }
-        });
-        return { moves, captures };
-    }
-    static constraintsOrthangonal(args) {
-        const { piece } = args;
-        const response = { moves: [], captures: [] };
-        Constraints.runUntil(piece.dirN.bind(piece), response, args);
-        Constraints.runUntil(piece.dirE.bind(piece), response, args);
-        Constraints.runUntil(piece.dirS.bind(piece), response, args);
-        Constraints.runUntil(piece.dirW.bind(piece), response, args);
-        return response;
-    }
-    static constraintsPawn(args) {
-        const { piece, piecePositions } = args;
-        const moves = [];
-        const captures = [];
-        const locationN1 = piece.dirN(1, piecePositions);
-        const locationN2 = piece.dirN(2, piecePositions);
-        if (Constraints.relationshipToTile(locationN1, args) === "BLANK") {
-            moves.push(locationN1);
-            if (!piece.moves.length && Constraints.relationshipToTile(locationN2, args) === "BLANK") {
-                moves.push(locationN2);
-            }
-        }
-        [
-            [piece.dirNW(1, piecePositions), piece.dirW(1, piecePositions)],
-            [piece.dirNE(1, piecePositions), piece.dirE(1, piecePositions)],
-        ].forEach(([location, enPassant]) => {
-            const standardCaptureRelationship = Constraints.relationshipToTile(location, args);
-            const enPassantCaptureRelationship = Constraints.relationshipToTile(enPassant, args);
-            if (standardCaptureRelationship === "ENEMY") {
-                captures.push(location);
-            }
-            else if (piece.moves.length > 0 && enPassantCaptureRelationship === "ENEMY") {
-                const enPassantRow = enPassant.row === (piece.playerWhite() ? "5" : "4");
-                const other = Constraints.locationToPiece(enPassant, args);
-                if (enPassantRow && other && other.data.type === "PAWN") {
-                    if (other.moves.length === 1 && other.moves[0] === args.moveIndex - 1) {
-                        location.capture = Object.assign({}, enPassant);
-                        captures.push(location);
-                    }
-                }
-            }
-        });
-        return { moves, captures };
-    }
-    static constraintsQueen(args) {
-        const diagonal = Constraints.constraintsDiagonal(args);
-        const orthagonal = Constraints.constraintsOrthangonal(args);
-        return {
-            moves: diagonal.moves.concat(orthagonal.moves),
-            captures: diagonal.captures.concat(orthagonal.captures),
-        };
-    }
-    static constraintsRook(args) {
-        return Constraints.constraintsOrthangonal(args);
-    }
-    static locationToPiece(location, args) {
-        if (!location) {
-            return undefined;
-        }
-        const { state, pieces } = args;
-        const row = state[location.row];
-        const occupyingId = row === undefined ? undefined : row[location.col];
-        return pieces[occupyingId];
-    }
-    static relationshipToTile(location, args) {
-        if (!location) {
-            return undefined;
-        }
-        const { piece } = args;
-        const occupying = Constraints.locationToPiece(location, args);
-        if (occupying) {
-            return occupying.data.player === piece.data.player ? "FRIEND" : "ENEMY";
-        }
-        else {
-            return "BLANK";
-        }
-    }
-    static runUntil(locationFunction, response, args) {
-        const { piecePositions } = args;
-        let inc = 1;
-        let location = locationFunction(inc++, piecePositions);
-        while (location) {
-            let abort = false;
-            const relations = Constraints.relationshipToTile(location, args);
-            if (relations === "ENEMY") {
-                response.captures.push(location);
-                abort = true;
-            }
-            else if (relations === "FRIEND") {
-                abort = true;
-            }
-            else {
-                response.moves.push(location);
-            }
-            if (abort) {
-                location = undefined;
-            }
-            else {
-                location = locationFunction(inc++, piecePositions);
-            }
-        }
-    }
-}
-class Piece {
-    constructor(data) {
-        this.moves = [];
-        this.promoted = false;
-        this.updateShape = false;
-        this.data = data;
-    }
-    get orientation() {
-        return this.data.player === "BLACK" ? -1 : 1;
-    }
-    dirN(steps, positions) {
-        return this.dir(steps, 0, positions);
-    }
-    dirS(steps, positions) {
-        return this.dir(-steps, 0, positions);
-    }
-    dirW(steps, positions) {
-        return this.dir(0, -steps, positions);
-    }
-    dirE(steps, positions) {
-        return this.dir(0, steps, positions);
-    }
-    dirNW(steps, positions) {
-        return this.dir(steps, -steps, positions);
-    }
-    dirNE(steps, positions) {
-        return this.dir(steps, steps, positions);
-    }
-    dirSW(steps, positions) {
-        return this.dir(-steps, -steps, positions);
-    }
-    dirSE(steps, positions) {
-        return this.dir(-steps, steps, positions);
-    }
-    dir(stepsRow, stepsColumn, positions) {
-        PIECE_DIR_CALC++;
-        const row = Utils.rowToInt(positions[this.data.id].row) + this.orientation * stepsRow;
-        const col = Utils.colToInt(positions[this.data.id].col) + this.orientation * stepsColumn;
-        if (row >= 0 && row <= 7 && col >= 0 && col <= 7) {
-            return { row: Utils.intToRow(row), col: Utils.intToCol(col) };
-        }
-        return undefined;
-    }
-    move(moveIndex) {
-        this.moves.push(moveIndex);
-    }
-    options(moveIndex, state, pieces, piecePositions, resultingChecks, kingCastles) {
-        return Constraints.generate({ moveIndex, state, piece: this, pieces, piecePositions, kingCastles }, resultingChecks);
-    }
-    playerBlack() {
-        return this.data.player === "BLACK";
-    }
-    playerWhite() {
-        return this.data.player === "WHITE";
-    }
-    promote(type = "QUEEN") {
-        this.data.type = type;
-        this.promoted = true;
-        this.updateShape = true;
-    }
-    shape() {
-        const player = this.data.player.toLowerCase();
-        switch (this.data.type) {
-            case "BISHOP":
-                return Shape.shapeBishop(player);
-            case "KING":
-                return Shape.shapeKing(player);
-            case "KNIGHT":
-                return Shape.shapeKnight(player);
-            case "PAWN":
-                return Shape.shapePawn(player);
-            case "QUEEN":
-                return Shape.shapeQueen(player);
-            case "ROOK":
-                return Shape.shapeRook(player);
-        }
-    }
-}
-class Board {
-    constructor(pieces, piecePositions) {
-        this.checksBlack = [];
-        this.checksWhite = [];
-        this.piecesTilesCaptures = {};
-        this.piecesTilesMoves = {};
-        this.tilesPiecesBlackCaptures = Utils.getInitialBoardState(() => []);
-        this.tilesPiecesBlackMoves = Utils.getInitialBoardState(() => []);
-        this.tilesPiecesWhiteCaptures = Utils.getInitialBoardState(() => []);
-        this.tilesPiecesWhiteMoves = Utils.getInitialBoardState(() => []);
-        this.pieceIdsBlack = [];
-        this.pieceIdsWhite = [];
-        this.state = Utils.getInitialBoardState();
-        this.pieces = pieces;
-        for (let id in pieces) {
-            if (pieces[id].playerWhite()) {
-                this.pieceIdsWhite.push(id);
-            }
-            else {
-                this.pieceIdsBlack.push(id);
-            }
-        }
-        this.initializePositions(piecePositions);
-    }
-    initializePositions(piecePositions) {
-        this.piecePositions = piecePositions;
-        this.initializeState();
-        this.piecesUpdate(0);
-    }
-    initializeState() {
-        for (let pieceId in this.pieces) {
-            const { row, col, active, _moves, _promoted } = this.piecePositions[pieceId];
-            if (_moves) {
-                delete this.piecePositions[pieceId]._moves;
-                // TODO: come back to this
-                // this.pieces[pieceId].moves = new Array(_moves);
-            }
-            if (_promoted) {
-                delete this.piecePositions[pieceId]._promoted;
-                this.pieces[pieceId].promote();
-            }
-            if (active) {
-                this.state[row] = this.state[row] || [];
-                this.state[row][col] = pieceId;
-            }
-        }
-    }
-    kingCastles(king) {
-        const castles = [];
-        // king has to not have moved
-        if (king.moves.length) {
-            return castles;
-        }
-        const kingIsWhite = king.playerWhite();
-        const moves = kingIsWhite ? this.tilesPiecesBlackMoves : this.tilesPiecesWhiteMoves;
-        const checkPositions = (row, rookCol, castles) => {
-            const cols = rookCol === "A" ? ["D", "C", "B"] : ["F", "G"];
-            // rook has to not have moved
-            const rookId = `${rookCol}${row}`;
-            const rook = this.pieces[rookId];
-            const { active } = this.piecePositions[rookId];
-            if (active && rook.moves.length === 0) {
-                let canCastle = true;
-                cols.forEach((col) => {
-                    // each tile has to be empty
-                    if (this.state[row][col]) {
-                        canCastle = false;
-                        // each tile cant be in the path of the other team
-                    }
-                    else if (moves[row][col].length) {
-                        canCastle = false;
-                    }
-                });
-                if (canCastle) {
-                    castles.push({ col: cols[1], row, castles: rookCol });
-                }
-            }
-        };
-        const row = kingIsWhite ? "1" : "8";
-        if (!this.pieces[`A${row}`].moves.length) {
-            checkPositions(row, "A", castles);
-        }
-        if (!this.pieces[`H${row}`].moves.length) {
-            checkPositions(row, "H", castles);
-        }
-        return castles;
-    }
-    kingCheckStates(kingPosition, captures, piecePositions) {
-        const { col, row } = kingPosition;
-        return captures[row][col].map((id) => piecePositions[id]).filter((pos) => pos.active);
-    }
-    pieceCalculateMoves(pieceId, moveIndex, state, piecePositions, piecesTilesCaptures, piecesTilesMoves, tilesPiecesCaptures, tilesPiecesMoves, resultingChecks, kingCastles) {
-        const { captures, moves } = this.pieces[pieceId].options(moveIndex, state, this.pieces, piecePositions, resultingChecks, kingCastles);
-        piecesTilesCaptures[pieceId] = Array.from(captures);
-        piecesTilesMoves[pieceId] = Array.from(moves);
-        captures.forEach(({ col, row }) => tilesPiecesCaptures[row][col].push(pieceId));
-        moves.forEach(({ col, row }) => tilesPiecesMoves[row][col].push(pieceId));
-    }
-    pieceCapture(piece) {
-        const pieceId = piece.data.id;
-        const { col, row } = this.piecePositions[pieceId];
-        this.state[row][col] = undefined;
-        delete this.piecePositions[pieceId].col;
-        delete this.piecePositions[pieceId].row;
-        this.piecePositions[pieceId].active = false;
-    }
-    pieceMove(piece, location) {
-        const pieceId = piece.data.id;
-        const { row, col } = this.piecePositions[pieceId];
-        this.state[row][col] = undefined;
-        this.state[location.row][location.col] = pieceId;
-        this.piecePositions[pieceId].row = location.row;
-        this.piecePositions[pieceId].col = location.col;
-        if (piece.data.type === "PAWN" && (location.row === "8" || location.row === "1")) {
-            piece.promote();
-        }
-    }
-    piecesUpdate(moveIndex) {
-        this.tilesPiecesBlackCaptures = Utils.getInitialBoardState(() => []);
-        this.tilesPiecesBlackMoves = Utils.getInitialBoardState(() => []);
-        this.tilesPiecesWhiteCaptures = Utils.getInitialBoardState(() => []);
-        this.tilesPiecesWhiteMoves = Utils.getInitialBoardState(() => []);
-        this.pieceIdsBlack.forEach((id) => this.pieceCalculateMoves(id, moveIndex, this.state, this.piecePositions, this.piecesTilesCaptures, this.piecesTilesMoves, this.tilesPiecesBlackCaptures, this.tilesPiecesBlackMoves, this.resultingChecks.bind(this), this.kingCastles.bind(this)));
-        this.pieceIdsWhite.forEach((id) => this.pieceCalculateMoves(id, moveIndex, this.state, this.piecePositions, this.piecesTilesCaptures, this.piecesTilesMoves, this.tilesPiecesWhiteCaptures, this.tilesPiecesWhiteMoves, this.resultingChecks.bind(this), this.kingCastles.bind(this)));
-        this.checksBlack = this.kingCheckStates(this.piecePositions.E1, this.tilesPiecesBlackCaptures, this.piecePositions);
-        this.checksWhite = this.kingCheckStates(this.piecePositions.E8, this.tilesPiecesWhiteCaptures, this.piecePositions);
-    }
-    resultingChecks({ piece, location, capture, moveIndex }) {
-        const tilesPiecesCaptures = Utils.getInitialBoardState(() => []);
-        const tilesPiecesMoves = Utils.getInitialBoardState(() => []);
-        const piecesTilesCaptures = {};
-        const piecesTilesMoves = {};
-        const state = JSON.parse(JSON.stringify(this.state));
-        const piecePositions = JSON.parse(JSON.stringify(this.piecePositions));
-        if (capture) {
-            const loc = location.capture || location;
-            const capturedId = state[loc.row][loc.col];
-            if (this.pieces[capturedId].data.type === "KING") {
-                // this is a checking move
-            }
-            else {
-                delete piecePositions[capturedId].col;
-                delete piecePositions[capturedId].row;
-                piecePositions[capturedId].active = false;
-            }
-        }
-        const pieceId = piece.data.id;
-        const { row, col } = piecePositions[pieceId];
-        state[row][col] = undefined;
-        state[location.row][location.col] = pieceId;
-        piecePositions[pieceId].row = location.row;
-        piecePositions[pieceId].col = location.col;
-        const ids = piece.playerWhite() ? this.pieceIdsBlack : this.pieceIdsWhite;
-        const king = piece.playerWhite() ? piecePositions.E1 : piecePositions.E8;
-        ids.forEach((id) => this.pieceCalculateMoves(id, moveIndex, state, piecePositions, piecesTilesCaptures, piecesTilesMoves, tilesPiecesCaptures, tilesPiecesMoves));
-        return this.kingCheckStates(king, tilesPiecesCaptures, piecePositions);
-    }
-    tileEach(callback) {
-        Board.ROWS.forEach((row) => {
-            Board.COLS.forEach((col) => {
-                const piece = this.tileFind({ row, col });
-                const moves = piece ? this.piecesTilesMoves[piece.data.id] : undefined;
-                const captures = piece ? this.piecesTilesCaptures[piece.data.id] : undefined;
-                callback({ row, col }, piece, moves, captures);
-            });
-        });
-    }
-    tileFind({ row, col }) {
-        const id = this.state[row][col];
-        return this.pieces[id];
-    }
-    toShortCode() {
-        const positionsAbsolute = [];
-        const positionsDefaults = [];
-        for (let id in this.piecePositions) {
-            const { active, col, row } = this.piecePositions[id];
-            const pos = `${col}${row}`;
-            const moves = this.pieces[id].moves;
-            const promotedCode = this.pieces[id].promoted ? "P" : "";
-            const movesCode = moves > 9 ? "9" : moves > 1 ? moves.toString() : "";
-            if (active) {
-                positionsAbsolute.push(`${promotedCode}${id}${id === pos ? "" : pos}${movesCode}`);
-                if (id !== pos || moves > 0) {
-                    positionsDefaults.push(`${promotedCode}${id}${pos}${movesCode}`);
-                }
-            }
-            else {
-                if (id !== "BQ" && id !== "WQ") {
-                    positionsDefaults.push(`${promotedCode}${id}X`);
-                }
-            }
-        }
-        const pA = positionsAbsolute.join(",");
-        const pD = positionsDefaults.join(",");
-        return pA.length > pD.length ? `X${pD}` : pA;
-    }
-}
-Board.COLS = ["A", "B", "C", "D", "E", "F", "G", "H"];
-Board.ROWS = ["1", "2", "3", "4", "5", "6", "7", "8"];
-class Game {
-    constructor(pieces, piecePositions, turn = "WHITE") {
-        this.active = null;
-        this.activePieceOptions = [];
-        this.moveIndex = 0;
-        this.moves = [];
-        this.turn = turn;
-        this.board = new Board(pieces, piecePositions);
-    }
-    activate(location) {
-        const tilePiece = this.board.tileFind(location);
-        if (tilePiece && !this.active && tilePiece.data.player !== this.turn) {
-            this.active = null;
-            return { type: "INVALID" };
-            // a piece is active rn
-        }
-        else if (this.active) {
-            const activePieceId = this.active.data.id;
-            this.active = null;
-            const validatedPosition = this.activePieceOptions.find((option) => option.col === location.col && option.row === location.row);
-            const positionIsValid = !!validatedPosition;
-            this.activePieceOptions = [];
-            const capturePiece = (validatedPosition === null || validatedPosition === void 0 ? void 0 : validatedPosition.capture) ? this.board.tileFind(validatedPosition.capture) : tilePiece;
-            // a piece is on the tile
-            if (capturePiece) {
-                const capturedPieceId = capturePiece.data.id;
-                // cancelling the selected piece on invalid location
-                if (capturedPieceId === activePieceId) {
-                    return { type: "CANCEL" };
-                }
-                else if (positionIsValid) {
-                    // capturing the selected piece
-                    this.capture(activePieceId, capturedPieceId, location);
-                    return {
-                        type: "CAPTURE",
-                        activePieceId,
-                        capturedPieceId,
-                        captures: [location],
-                    };
-                    // cancel
-                }
-                else if (capturePiece.data.player !== this.turn) {
-                    return { type: "CANCEL" };
-                }
-                else {
-                    // proceed to TOUCH or CANCEL
-                }
-            }
-            else if (positionIsValid) {
-                // moving will return castled if that happens (only two move)
-                const castledId = this.move(activePieceId, location);
-                return { type: "MOVE", activePieceId, moves: [location], castledId };
-                // invalid spot. cancel.
-            }
-            else {
-                return { type: "CANCEL" };
-            }
-        }
-        // no piece selected or new CANCEL + TOUCH
-        if (tilePiece) {
-            const tilePieceId = tilePiece.data.id;
-            const moves = this.board.piecesTilesMoves[tilePieceId];
-            const captures = this.board.piecesTilesCaptures[tilePieceId];
-            if (!moves.length && !captures.length) {
-                return { type: "INVALID" };
-            }
-            this.active = tilePiece;
-            this.activePieceOptions = moves.concat(captures);
-            return { type: "TOUCH", captures, moves, activePieceId: tilePieceId };
-            // cancelling
-        }
-        else {
-            this.activePieceOptions = [];
-            return { type: "CANCEL" };
-        }
-    }
-    capture(capturingPieceId, capturedPieceId, location) {
-        const captured = this.board.pieces[capturedPieceId];
-        this.board.pieceCapture(captured);
-        this.move(capturingPieceId, location, true);
-    }
-    handleCastling(piece, location) {
-        if (piece.data.type !== "KING" ||
-            piece.moves.length ||
-            location.row !== (piece.playerWhite() ? "1" : "8") ||
-            (location.col !== "C" && location.col !== "G")) {
-            return;
-        }
-        return `${location.col === "C" ? "A" : "H"}${location.row}`;
-    }
-    move(pieceId, location, capture = false) {
-        const piece = this.board.pieces[pieceId];
-        const castledId = this.handleCastling(piece, location);
-        piece.move(this.moveIndex);
-        if (castledId) {
-            const castled = this.board.pieces[castledId];
-            castled.move(this.moveIndex);
-            this.board.pieceMove(castled, { col: location.col === "C" ? "D" : "F", row: location.row });
-            this.moves.push(`${pieceId}O${location.col}${location.row}`);
-        }
-        else {
-            this.moves.push(`${pieceId}${capture ? "x" : ""}${location.col}${location.row}`);
-        }
-        this.moveIndex++;
-        this.board.pieceMove(piece, location);
-        this.turn = this.turn === "WHITE" ? "BLACK" : "WHITE";
-        this.board.piecesUpdate(this.moveIndex);
-        const state = this.moveResultState();
-        console.log(state);
-        if (!state.moves && !state.captures) {
-            alert(state.stalemate ? "Stalemate!" : `${this.turn === "WHITE" ? "Black" : "White"} Wins!`);
-        }
-        return castledId;
-    }
-    moveResultState() {
-        let movesWhite = 0;
-        let capturesWhite = 0;
-        let movesBlack = 0;
-        let capturesBlack = 0;
-        this.board.tileEach(({ row, col }) => {
-            movesWhite += this.board.tilesPiecesWhiteMoves[row][col].length;
-            capturesWhite += this.board.tilesPiecesWhiteCaptures[row][col].length;
-            movesBlack += this.board.tilesPiecesBlackMoves[row][col].length;
-            capturesBlack += this.board.tilesPiecesBlackCaptures[row][col].length;
-        });
-        const activeBlack = this.board.pieceIdsBlack.filter((pieceId) => this.board.piecePositions[pieceId].active).length;
-        const activeWhite = this.board.pieceIdsWhite.filter((pieceId) => this.board.piecePositions[pieceId].active).length;
-        const moves = this.turn === "WHITE" ? movesWhite : movesBlack;
-        const captures = this.turn === "WHITE" ? capturesWhite : capturesBlack;
-        const noMoves = movesWhite + capturesWhite + movesBlack + capturesBlack === 0;
-        const checked = !!this.board[this.turn === "WHITE" ? "checksBlack" : "checksWhite"].length;
-        const onlyKings = activeBlack === 1 && activeWhite === 1;
-        const stalemate = onlyKings || noMoves || ((moves + captures === 0) && !checked);
-        const code = this.board.toShortCode();
-        return { turn: this.turn, checked, moves, captures, code, stalemate };
-    }
-    randomMove() {
-        if (this.active) {
-            if (this.activePieceOptions.length) {
-                const { col, row } = this.activePieceOptions[Math.floor(Math.random() * this.activePieceOptions.length)];
-                return { col, row };
-            }
-            else {
-                const { col, row } = this.board.piecePositions[this.active.data.id];
-                return { col, row };
-            }
-        }
-        else {
-            const ids = this.turn === "WHITE" ? this.board.pieceIdsWhite : this.board.pieceIdsBlack;
-            const positions = ids.map((pieceId) => {
-                const moves = this.board.piecesTilesMoves[pieceId];
-                const captures = this.board.piecesTilesCaptures[pieceId];
-                return (moves.length || captures.length) ? this.board.piecePositions[pieceId] : undefined;
-            }).filter((position) => position === null || position === void 0 ? void 0 : position.active);
-            const remaining = positions[Math.floor(Math.random() * positions.length)];
-            const { col, row } = remaining || { col: "E", row: "1" };
-            return { col, row };
-        }
-    }
-}
-class View {
-    constructor(element, game, perspective) {
-        this.element = element;
-        this.game = game;
-        this.setPerspective(perspective || this.game.turn);
-        this.tiles = Utils.getInitialBoardTiles(this.element, this.handleTileClick.bind(this));
-        this.pieces = Utils.getInitialBoardPieces(this.element, this.game.board.pieces);
-        this.drawPiecePositions();
-    }
-    drawActivePiece(activePieceId) {
-        const { row, col } = this.game.board.piecePositions[activePieceId];
-        this.tiles[row][col].classList.add("highlight-active");
-        this.pieces[activePieceId].classList.add("highlight-active");
-    }
-    drawCapturedPiece(capturedPieceId) {
-        const piece = this.pieces[capturedPieceId];
-        piece.style.setProperty("--transition-delay", "var(--transition-duration)");
-        piece.style.removeProperty("--pos-col");
-        piece.style.removeProperty("--pos-row");
-        piece.style.setProperty("--scale", "0");
-    }
-    drawPiecePositions(moves = [], moveInner = "") {
-        document.body.style.setProperty("--color-background", `var(--color-${this.game.turn.toLowerCase()}`);
-        const other = this.game.turn === "WHITE" ? "turn-black" : "turn-white";
-        const current = this.game.turn === "WHITE" ? "turn-white" : "turn-black";
-        this.element.classList.add(current);
-        this.element.classList.remove(other);
-        if (moves.length) {
-            this.element.classList.add("touching");
-        }
-        else {
-            this.element.classList.remove("touching");
-        }
-        const key = (row, col) => `${row}-${col}`;
-        const moveKeys = moves.map(({ row, col }) => key(row, col));
-        this.game.board.tileEach(({ row, col }, piece, pieceMoves, pieceCaptures) => {
-            const tileElement = this.tiles[row][col];
-            const move = moveKeys.includes(key(row, col)) ? moveInner : "";
-            const format = (id, className) => this.game.board.pieces[id].shape();
-            tileElement.innerHTML = `
-        <div class="move">${move}</div>
-        <div class="moves">
-          ${this.game.board.tilesPiecesBlackMoves[row][col].map((id) => format(id, "black")).join("")}
-          ${this.game.board.tilesPiecesWhiteMoves[row][col].map((id) => format(id, "white")).join("")}
-        </div>
-        <div class="captures">
-          ${this.game.board.tilesPiecesBlackCaptures[row][col].map((id) => format(id, "black")).join("")}
-          ${this.game.board.tilesPiecesWhiteCaptures[row][col].map((id) => format(id, "white")).join("")}
-        </div>
-      `;
-            if (piece) {
-                tileElement.classList.add("occupied");
-                const pieceElement = this.pieces[piece.data.id];
-                pieceElement.style.setProperty("--pos-col", Utils.colToInt(col).toString());
-                pieceElement.style.setProperty("--pos-row", Utils.rowToInt(row).toString());
-                pieceElement.style.setProperty("--scale", "1");
-                pieceElement.classList[(pieceMoves === null || pieceMoves === void 0 ? void 0 : pieceMoves.length) ? "add" : "remove"]("can-move");
-                pieceElement.classList[(pieceCaptures === null || pieceCaptures === void 0 ? void 0 : pieceCaptures.length) ? "add" : "remove"]("can-capture");
-                if (piece.updateShape) {
-                    piece.updateShape = false;
-                    pieceElement.innerHTML = piece.shape();
-                }
-            }
-            else {
-                tileElement.classList.remove("occupied");
-            }
-        });
-    }
-    drawPositions(moves, captures) {
-        moves === null || moves === void 0 ? void 0 : moves.forEach(({ row, col }) => {
-            var _a, _b;
-            this.tiles[row][col].classList.add("highlight-move");
-            (_b = this.pieces[(_a = this.game.board.tileFind({ row, col })) === null || _a === void 0 ? void 0 : _a.data.id]) === null || _b === void 0 ? void 0 : _b.classList.add("highlight-move");
-        });
-        captures === null || captures === void 0 ? void 0 : captures.forEach(({ row, col, capture }) => {
-            var _a, _b;
-            if (capture) {
-                row = capture.row;
-                col = capture.col;
-            }
-            this.tiles[row][col].classList.add("highlight-capture");
-            (_b = this.pieces[(_a = this.game.board.tileFind({ row, col })) === null || _a === void 0 ? void 0 : _a.data.id]) === null || _b === void 0 ? void 0 : _b.classList.add("highlight-capture");
-        });
-    }
-    drawResetClassNames() {
-        document.querySelectorAll(".highlight-active").forEach((element) => element.classList.remove("highlight-active"));
-        document.querySelectorAll(".highlight-capture").forEach((element) => element.classList.remove("highlight-capture"));
-        document.querySelectorAll(".highlight-move").forEach((element) => element.classList.remove("highlight-move"));
-    }
-    handleTileClick(location) {
-        const { activePieceId, capturedPieceId, moves = [], captures = [], type } = this.game.activate(location);
-        this.drawResetClassNames();
-        if (type === "TOUCH") {
-            const enPassant = captures.find((capture) => !!capture.capture);
-            const passingMoves = enPassant ? moves.concat([enPassant]) : moves;
-            this.drawPiecePositions(passingMoves, this.game.board.pieces[activePieceId].shape());
-        }
-        else {
-            this.drawPiecePositions();
-        }
-        if (type === "CANCEL" || type === "INVALID") {
-            return;
-        }
-        if (type === "MOVE" || type === "CAPTURE") {
-        }
-        else {
-            this.drawActivePiece(activePieceId);
-        }
-        if (type === "TOUCH") {
-            this.drawPositions(moves, captures);
-        }
-        else if (type === "CAPTURE") {
-            this.drawCapturedPiece(capturedPieceId);
-        }
-        // crazy town
-        // this.setPerspective(this.game.turn);
-    }
-    setPerspective(perspective) {
-        const other = perspective === "WHITE" ? "perspective-black" : "perspective-white";
-        const current = perspective === "WHITE" ? "perspective-white" : "perspective-black";
-        this.element.classList.add(current);
-        this.element.classList.remove(other);
-    }
-}
-class Control {
-    constructor(game, view) {
-        this.inputSpeedAsap = document.getElementById("speed-asap");
-        this.inputSpeedFast = document.getElementById("speed-fast");
-        this.inputSpeedMedium = document.getElementById("speed-medium");
-        this.inputSpeedSlow = document.getElementById("speed-slow");
-        this.inputRandomBlack = document.getElementById("black-random");
-        this.inputRandomWhite = document.getElementById("white-random");
-        this.inputPerspectiveBlack = document.getElementById("black-perspective");
-        this.inputPerspectiveWhite = document.getElementById("white-perspective");
-        this.game = game;
-        this.view = view;
-        this.inputPerspectiveBlack.addEventListener("change", this.updateViewPerspective.bind(this));
-        this.inputPerspectiveWhite.addEventListener("change", this.updateViewPerspective.bind(this));
-        this.updateViewPerspective();
-    }
-    get speed() {
-        if (this.inputSpeedAsap.checked) {
-            return 50;
-        }
-        if (this.inputSpeedFast.checked) {
-            return 250;
-        }
-        if (this.inputSpeedMedium.checked) {
-            return 500;
-        }
-        if (this.inputSpeedSlow.checked) {
-            return 1000;
-        }
-    }
-    autoplay() {
-        const input = this.game.turn === "WHITE" ? this.inputRandomWhite : this.inputRandomBlack;
-        if (!input.checked) {
-            setTimeout(this.autoplay.bind(this), this.speed);
-            return;
-        }
-        const position = this.game.randomMove();
-        this.view.handleTileClick(position);
-        setTimeout(this.autoplay.bind(this), this.speed);
-    }
-    updateViewPerspective() {
-        this.view.setPerspective(this.inputPerspectiveBlack.checked ? "BLACK" : "WHITE");
-    }
-}
-const DEMOS = {
-    castle1: "XD8B3,B1X,C1X,D1X,F1X,G1X",
-    castle2: "XD8B3,B1X,C1X,C2X,D1X,F1X,G1X",
-    castle3: "XD8E3,B1X,C1X,F2X,D1X,F1X,G1X",
-    promote1: "E1,E8,C2C7",
-    promote2: "E1,E8E7,PC2C8",
-    start: "XE7E6,F7F5,D2D4,E2E5",
-    test2: "C8E2,E8,G8H1,D7E4,H7H3,PA2H7,PB2G7,D2D6,E2E39,A1H2,E1B3",
-    test: "C8E2,E8,G8H1,D7E4,H7H3,D1H7,PB2G7,D2D6,E2E39,A1H2,E1B3",
+/*
+	Provides the basic game mechanics, such as possible moves on a board,
+	whether or not the king is in check, etc.
+	
+	Game.js handles the game on-screen, handling board creation, user click events,
+	piece moves, etc.
+	
+	The computer's moves are determined using a chess engine object (see Engines.js).
+*/
+
+/*
+	Picks a random array element.
+*/
+Array.prototype.random = function() {
+	return this[Math.floor(Math.random() * this.length)];
 };
-const initialPositions = Utils.getInitialPiecePositions();
-// const initialPositions = Utils.getPositionsFromShortCode(DEMOS.castle1);
-const initialTurn = "WHITE";
-const perspective = "WHITE";
-const game = new Game(Utils.getInitialPieces(), initialPositions, initialTurn);
-const view = new View(document.getElementById("board"), game, perspective);
-const control = new Control(game, view);
-control.autoplay();
+
+/*
+	Replaces all of the oldPhrase instances with newPhrase within a string.
+*/
+String.prototype.replaceAll = function(oldPhrase, newPhrase) {
+	return this.replace(new RegExp(oldPhrase, "g"), newPhrase);
+};
+
+/*
+	Clones an object, returning the copy.
+	Can be used to avoid passing arrays by reference.
+*/
+function CloneObject(obj) {
+	return JSON.parse(JSON.stringify(obj));
+}
+
+/*
+	Governs the basic game mechanics, such as retrieving possible moves, retrieving game status, etc.
+*/
+var Chess;
+
+(function() {
+	Chess = {
+		// Chess piece types enumeration
+		pieceTypes : {
+			king : 1,
+			queen : 2,
+			rook : 3,
+			bishop : 4,
+			knight : 5,
+			pawn : 6
+		},
+		
+		/*
+			Returns a two-dimensional array of all spaces' black/white attack counts.
+			Each array object has the following properties:
+				- whiteAttacks
+				- blackAttacks
+			
+			The members are indexed by left/top spaces, so findAttacks()[3][5] would be for the 4th
+			column, 6th space.
+		*/
+		findAttacks : function(board) {
+			var attacks = [];
+			
+			// Initialize our attacks array.
+			for (var left = 0; left < 8; left++) {
+				attacks[left] = [];
+				
+				for (var top = 0; top < 8; top++) {
+					attacks[left][top] = {
+						whiteAttacks : 0,
+						blackAttacks : 0
+					};
+				}
+			}
+			
+			// Returns whether or not the space is occupied with a piece.
+			function CheckIfOccupied(left, top) {
+				return board.spaces[left] && board.spaces[left][top] ? true : false;
+			}
+			
+			/*
+				Checks for a piece's possible moves by iterating through the list of potential
+				moves (via the offsets parameter) and adding to the moves array as long as they are still
+				available. Used for line-move pieces (bishop, rook, queen).
+			*/
+			function ProcessPiece(piece, offsets) {
+				$.each(offsets, function(index, offset) {
+					var evalSpace = {
+						left : piece.space.left,
+						top : piece.space.top
+					};
+					
+					var occupied;
+					
+					do {
+						evalSpace.left += offset[0];
+						evalSpace.top += offset[1];
+						
+						// If still a valid space, increment attack count.
+						if (attacks[evalSpace.left] && attacks[evalSpace.left][evalSpace.top])
+							attacks[evalSpace.left][evalSpace.top][piece.color + "Attacks"]++;
+						
+						// Check if the space is occupied.
+						occupied = CheckIfOccupied(evalSpace.left, evalSpace.top);
+					
+					// Keep going until we hit an occupied space, or we move off the board.
+					} while (!occupied && evalSpace.left >= 0 && evalSpace.left <= 7 &&
+						evalSpace.top >= 0 && evalSpace.top <= 7);
+				});
+			}
+			
+			// Add up the attacks, piece by piece.
+			$(board.pieces).each(function() {
+				var piece = this,
+					space = piece.space;
+				
+				switch (piece.type) {
+					case Chess.pieceTypes.king:
+						// Add attack to each adjacent square.
+						for (var left = -1; left <= 1; left++) {
+							for (var top = -1; top <= 1; top++) {
+								if ((left !== 0 || top !== 0) && attacks[space.left + left] &&
+									attacks[space.left + left][space.top + top]) {
+									attacks[space.left + left][space.top + top][piece.color + "Attacks"]++;
+								}
+							}
+						}
+						break;
+					
+					case Chess.pieceTypes.bishop:
+						ProcessPiece(piece, [[-1,-1], [1,-1], [-1,1], [1,1]]);
+						break;
+					
+					case Chess.pieceTypes.rook:
+						ProcessPiece(piece, [[-1,0], [1,0], [0,1], [0,-1]]);
+						break;
+					
+					case Chess.pieceTypes.queen:
+						ProcessPiece(piece, [[-1,0], [1,0], [0,1], [0,-1], [-1,-1], [1,-1], [-1,1], [1,1]]);
+						break;
+					
+					case Chess.pieceTypes.knight:
+						// Add attack to each jump move square.
+						// Check each of the eight possible moves.
+						$.each([[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]], function(index, offsets) {
+							// If a valid space...
+							if (attacks[space.left + offsets[0]] && attacks[space.left + offsets[0]][space.top + offsets[1]])
+								attacks[space.left + offsets[0]][space.top + offsets[1]][piece.color + "Attacks"]++;
+						});
+						break;
+					
+					case Chess.pieceTypes.pawn:
+						// White moves up, black down.
+						var topOffset = piece.color === "white" ? -1 : 1;
+						
+						$.each([-1, 1], function(index, leftOffset) {
+							// Check two attack squares.
+							if (attacks[space.left + leftOffset] && attacks[space.left + leftOffset][space.top + topOffset])
+								attacks[space.left + leftOffset][space.top + topOffset][piece.color + "Attacks"]++;
+						});
+						
+						break;
+				}
+			});
+			
+			return attacks;
+		},
+		
+		/*
+			Finds all possible moves for a given piece on a given board.
+			
+			board: an object with the following properties:
+				- pieces: an array of piece objects (see below)
+				- lastMoved: the piece object that last moved (if any) (relevant for en passant)
+			
+			piece: a piece object with the following properties:
+				- id (id of the associated on-screen element)
+				- type (of type pieceType)
+				- space {left, top}; this is taken from the top left space as (0,0)
+				- color ("white", "black")
+				- moved (boolean): whether or not the piece has moved (relevant for castles)
+			
+			includeAttacks: if true, include where pieces are attacking (but are not valid moves)
+			
+			ignoreChecks: if true, moves that would end up in check for the player are allowed
+			
+			Returns an array of moves available to the piece.
+			Each array member is an object with the following properties:
+				- left
+				- top
+				- status: either "available", "take", (move will capture an opponent piece)
+						  or "attacking" (meaning the piece is attacking the square)
+		*/
+		getPieceMoves : function(board, piece, includeAttacks, ignoreChecks) {
+			/*
+				Returns one of four possible results for a space:
+				* invalid: the space doesn't exist on the board (out of bound)
+				* available: the space is empty; it's available for moving
+				* blocked: the space is filled with a piece of the same color; no move allowed
+				* take: the space is filled with an opponent piece; can move and take the piece
+			*/
+			function EvalSpace(left, top) {
+				if (left < 0 || left > 7 || top < 0 || top > 7)
+					return "invalid";
+				
+				var pieceInSpace = board.spaces[left][top];
+				
+				return pieceInSpace === false ? "available" :
+					(pieceInSpace.color === piece.color ? "blocked" : "take");
+			}
+			
+			/*
+				Checks for a piece's possible moves by iterating through the list of potential
+				moves (via the offsets parameter) and adding to the moves array as long as they are still
+				available. Used for line-move pieces (bishop, rook, queen).
+			*/
+			function ProcessPieceMoves(offsets) {
+				$.each(offsets, function(index, offset) {
+					var space = {
+						left : piece.space.left,
+						top : piece.space.top
+					};
+					
+					do {
+						space.left += offset[0];
+						space.top += offset[1];
+						
+						move = EvalSpace(space.left, space.top);
+						
+						if (move === "available" || move === "take") {
+							moves.push({
+								left : space.left,
+								top : space.top,
+								status : move,
+								piece : piece
+							});
+						}
+					} while (move === "available");
+				});
+			}
+			
+			var moves = [],
+				pieces = $(board.pieces);
+			
+			// Different moves per piece type...
+			switch (piece.type) {
+				case Chess.pieceTypes.pawn:
+					// Check for forward moves.
+					for (var i = 1; i <= (piece.moved ? 1 : 2); i++) {
+						var top = piece.space.top + i * (piece.color === "white" ? -1 : 1),
+							move = EvalSpace(piece.space.left, top);
+						
+						if (move === "available") {
+							moves.push({
+								left : piece.space.left,
+								top : top,
+								status : move,
+								piece : piece
+							});
+						}
+						else
+							break;
+					}
+					
+					// Check for takes.
+					var top = piece.space.top + (piece.color === "white" ? -1 : 1);
+					$.each([-1, 1], function(index, leftOffset) {
+						var moveStatus = EvalSpace(piece.space.left + leftOffset, top);
+						
+						if (moveStatus === "take" || (moveStatus === "available" && includeAttacks)) {
+							moves.push({
+								left : piece.space.left + leftOffset,
+								top : top,
+								status : moveStatus === "available" ? "attacking" : "take",
+								piece : piece
+							});
+						}
+					});
+					
+					break;
+				
+				case Chess.pieceTypes.knight:
+					// Check each of the eight possible moves.
+					$.each([[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]], function(index, offsets) {
+						var move = EvalSpace(piece.space.left + offsets[0], piece.space.top + offsets[1]);
+						if (move === "available" || move === "take") {
+							moves.push({
+								left : piece.space.left + offsets[0],
+								top : piece.space.top + offsets[1],
+								status : move,
+								piece : piece
+							});
+						}
+					});
+					
+					break;
+				
+				case Chess.pieceTypes.bishop:
+					ProcessPieceMoves([[-1,-1],[1,-1],[-1,1],[1,1]]);
+					break;
+				
+				case Chess.pieceTypes.rook:
+					ProcessPieceMoves([[-1,0],[1,0],[0,1],[0,-1]]);
+					break;
+				
+				case Chess.pieceTypes.queen:
+					ProcessPieceMoves([[-1,0],[1,0],[0,1],[0,-1],[-1,-1],[1,-1],[-1,1],[1,1]]);
+					break;
+				
+				case Chess.pieceTypes.king:
+					// Current space.
+					var space = {
+						left : piece.space.left,
+						top : piece.space.top
+					};
+					
+					// Check each neighboring square.
+					for (var leftOffset = -1; leftOffset <= 1; leftOffset++) {
+						for (var topOffset = -1; topOffset <= 1; topOffset++) {
+							var move = EvalSpace(space.left + leftOffset, space.top + topOffset);
+							if (move === "available" || move === "take") {
+								moves.push({
+									left : space.left + leftOffset,
+									top : space.top + topOffset,
+									move : move,
+									piece : piece
+								});
+							}
+						}
+					}
+					
+					// Look for castling.
+					if (!piece.moved) {
+						// Get unmoved rooks.
+						var unmovedRooks = pieces.filter(function() {
+							return this.type === Chess.pieceTypes.rook &&
+								this.color === piece.color &&
+								!this.moved;
+						});
+						
+						var possibleMoves = [];
+						
+						// For each unmoved rook, note the spaces to check to ensure the castling is possible.
+						unmovedRooks.each(function() {
+							// Left column rook.
+							if (this.space.left === 0) {
+								possibleMoves.push({
+									rook : this,
+									kingMoveSpace : {
+										left : 2,
+										top : piece.space.top
+									},
+									rookMoveSpace : {
+										left : 3,
+										top : piece.space.top
+									},
+									emptySpaces : [1, 2, 3]
+								});
+							}
+							
+							// Right column rook.
+							else {
+								possibleMoves.push({
+									rook : this,
+									kingMoveSpace : {
+										left : 6
+									},
+									rookMoveSpace : {
+										left : 5
+									},
+									emptySpaces : [5, 6]
+								});
+							}
+						});
+						
+						// Make sure each intermediary space is empty; if not, the castling is not possible.
+						$.each(possibleMoves, function(index, possibleMove) {
+							// If no blocking pieces...
+							if (pieces.filter(function() {
+								return this.space.top === piece.space.top &&
+									possibleMove.emptySpaces.indexOf(this.space.left) >= 0;
+							}).length === 0) {
+								// Add the castling as a possible move.
+								moves.push({
+									left : possibleMove.kingMoveSpace.left,
+									top : piece.space.top,
+									move : "available",
+									piece : piece
+								});
+							}
+						});
+					}
+					
+					break;
+			}
+			
+			// Make sure the found moves do not result in a check; if so, get rid of them.
+			if (!ignoreChecks) {
+				moves = $(moves).filter(function() {
+					var move = this,
+						boardAfterMove = Chess.copyAndMove(CloneObject(board), move.piece, {left : move.left, top : move.top});
+					
+					return Chess.getGameStatus(boardAfterMove, piece.color, true) !== "check";
+				}).toArray();
+			}
+			
+			return moves;
+		},
+		
+		/*
+			Gets an array of all legal moves by the current player.
+		*/
+		getAllPossibleMoves : function(board, color, ignoreChecks) {
+			var allPossibleMoves = [];
+			
+			// For each piece on the board...
+			$(board.pieces).each(function() {
+				var piece = this;
+				
+				// Check for this piece's moves if it is this player's turn.
+				if (piece.color === color) {
+					// Append this list of moves to the total possible moves.
+					allPossibleMoves = allPossibleMoves.concat(Chess.getPieceMoves(board, piece, false, ignoreChecks));
+				}
+			});
+			
+			return allPossibleMoves;
+		},
+		
+		/*
+			Copies the board in memory and moves the piece.
+			Returns the updated board object.
+		*/
+		copyAndMove : function(board, piece, space) {
+			var newBoard = CloneObject(board),
+				pieces = $(newBoard.pieces);
+			
+			// If taking an opponent's piece, remove it from the game.
+			var oppPiece = board.spaces[space.left][space.top];
+			if (oppPiece) {
+				// Remove the piece from in-memory board.
+				pieces = pieces.filter(function() {
+					return this.id !== oppPiece.id;
+				});
+				newBoard.pieces = pieces.toArray();
+			}
+			
+			// If castling...
+			if (piece.type === Chess.pieceTypes.king && Math.abs(piece.space.left - space.left) > 1) {
+				// The column of the castling rook.
+				var rookLeft = space.left === 2 ? 0 : 7;
+				
+				// The left space to which the rook should move.
+				var rookMoveLeft = space.left === 2 ? 3 : 5;
+				
+				// Find the rook.
+				var rook = pieces.filter(function() {
+					return this.type === Chess.pieceTypes.rook &&
+						this.color === piece.color &&
+						this.space.left === rookLeft;
+				}).get(0);
+				
+				// Update the rook in memory.
+				newBoard.spaces[rook.space.left][rook.space.top] = false;
+				newBoard.spaces[rookMoveLeft][rook.space.top] = rook;
+				rook.space.left = rookMoveLeft;
+				rook.moved = true;
+			}
+			
+			// Move to the new space.
+			var newBoardPiece = pieces.filter(function() {
+				return this.id === piece.id;
+			}).get(0);
+			newBoard.spaces[newBoardPiece.space.left][newBoardPiece.space.top] = false;
+			newBoard.spaces[space.left][space.top] = newBoardPiece;
+			newBoardPiece.space = space;
+			newBoardPiece.moved = true;
+			
+			return newBoard;
+		},
+		
+		/*
+			Determines game status.
+			Possible results: "ready", "check", "stalemate", "white wins", "black wins"
+			
+			board: an object with a pieces property that is an array of piece objects
+			
+			color: whose move it is; either "white" or "black"
+		*/
+		getGameStatus : function(board, color, ignoreChecks) {
+			var kingPieces = {},
+				kingSpaces = {},
+				attacks = Chess.findAttacks(board),
+				oppColor = color === "black" ? "white" : "black";
+			
+			// Find the spaces on the board of the two kings.
+			$(board.pieces).each(function() {
+				// If a king, note its position and piece object.
+				if (this.type === Chess.pieceTypes.king) {
+					kingSpaces[this.color] = this.space;
+					kingPieces[this.color] = this;
+				}
+			});
+			
+			// If neither king is being attacked, the game is open.
+			if (attacks[kingSpaces["white"].left][kingSpaces["white"].top].blackAttacks === 0 &&
+				attacks[kingSpaces["black"].left][kingSpaces["black"].top].whiteAttacks === 0)
+				return "ready";
+			else {
+				// If the current player's king is attacked then it's either they're in check or they've lost.
+				if (attacks[kingSpaces[color].left][kingSpaces[color].top][oppColor + "Attacks"] > 0) {
+					return Chess.getAllPossibleMoves(board, color, ignoreChecks).length === 0 ?
+						(color === "white" ? "black" : "white") + " wins" : "check";
+				}
+				else
+					return "ready";
+			}
+		}
+	};
+})();
+/// <reference path="jquery dev.js" />
+
+/*
+	Handles the game on-screen, handling board creation, user click events,
+	piece moves, etc.
+	
+	The rules of chess are defined in the Chess object (see Chess.js),
+	and the computer's moves are determined using a chess engine object (see Engines.js).
+*/
+
+/*
+	Contains the game's state information, and provides functions to instruct the on-screen game
+	to make changes in game state.
+*/
+var game = {
+	// Piece objects array
+	pieces : null,
+	
+	// ".space" board game elements on screen
+	spaceElements : null,
+	
+	// Basic game state.
+	curPiece : null,			// The piece the user has clickd on, to potentially move.
+	turn : null,				// Whose turn it is (either "white" or "black").
+	moves : null,				// An array of moves made throughout the game.
+	moveShownIndex : null,		/*	
+									Which move is currently visible; null if viewing the "live" game.
+									Decrements as we view previous moves (via the mouse wheel).
+								*/
+	
+	// Player types (computer, human).
+	players : {
+		white : null,
+		black : null
+	},
+	
+	// Player help options.
+	options : {
+		showAttackValues : false
+	},
+	
+	/*
+		Starts a new game.
+	*/
+	start : function() {
+		// Remove the board, if existent.
+		$(".board").remove();
+		
+		// Determine player types.
+		game.players.white = $("#ddWhite").val();
+		game.players.black = $("#ddBlack").val();
+		
+		// Assign engine objects to the players, if computer engines are playing.
+		if (game.players.white !== "Human")
+			game.players.white = engines[game.players.white];
+		if (game.players.black !== "Human")
+			game.players.black = engines[game.players.black];
+		
+		// Add game board to the page.
+		var board = $("<div>", {
+			id : "board",
+			"class" : "board"
+		}).appendTo(document.body);
+		
+		// Establish game elements.
+		game.pieces = [];
+		game.spaces = [];			// Holds pieces in a 2d array. game.spaces[2][6] would be space c2.
+		game.moves = [];
+		game.turn = "white";
+		game.moveShownIndex = null;
+		
+		// Draw the game board spaces.
+		for (var row = 1; row <= 8; row++) {
+			var curRow = $("<div>", {
+				"class" : row % 2 === 1 ? "row" : "altrow"
+			}).appendTo(board);
+			
+			for (var col = 1; col <= 8; col++) {
+				var space = $("<div>", {
+					"class" : "space"
+				}).appendTo(curRow).get(0);
+				
+				space.row = row - 1;
+				space.col = col - 1;
+			}
+			
+			// Initialize game spaces array.
+			game.spaces[row - 1] = [false, false, false, false, false, false, false, false];
+		}
+		
+		// Initialize space data.
+		game.spaceElements = board.find(".space");
+		
+		// Initialize scoresheet and score.
+		$("#Scoresheet").html("<thead><tr><th></th><th>White</th><th>Black</th></tr></thead><tbody></tbody>");
+		$("#Score").html("");
+		
+		// Adds a piece to the game.
+		function AddPiece(type, space, color) {
+			// On-screen game element.
+			var element = game.createPiece(type, color).appendTo(board);
+			
+			// Piece object.
+			var piece = {
+				// Onboard game piece element id
+				id : element.attr("id"),
+				
+				// Left / top object describing the element's onboard position.
+				space : space,
+				
+				// "white" or "black"
+				color : color,
+				
+				// Game pieceTypes enum member value.
+				type : type
+			};
+			
+			// Place the piece on the right spot on the board.
+			element.css({
+				left : space.left * 100,
+				top : space.top * 100
+			});
+			
+			// Add to the pieces collection.
+			game.pieces.push(piece);
+			
+			// Add to the games spaces.
+			game.spaces[space.left][space.top] = piece;
+		}
+		
+		// Add the back (R,Kn,B,K,Q,B,Kn,R) rows.
+		var basePieces = [Chess.pieceTypes.rook, Chess.pieceTypes.knight, Chess.pieceTypes.bishop, Chess.pieceTypes.queen,
+				Chess.pieceTypes.king, Chess.pieceTypes.bishop, Chess.pieceTypes.knight, Chess.pieceTypes.rook];
+		$.each(basePieces, function(index, type) {
+			AddPiece(type, {left : index, top : 7}, "white");
+			AddPiece(type, {left : index, top : 0}, "black");
+		});
+		
+		// Add the pawn rows.
+		for (var i = 0; i < 8; i++) {
+			AddPiece(Chess.pieceTypes.pawn, {left : i, top : 1}, "black");
+			AddPiece(Chess.pieceTypes.pawn, {left : i, top : 6}, "white");
+		}
+		
+		// Click event for moving pieces.
+		$(".piece").click(function() {
+			// Get the piece object associated with this space.
+			var piece = this,
+				pieceObj = $(game.pieces).filter(function() {
+						return this.id === piece.id;
+					}).get(0);
+			
+			// Check if the user is clicking a space to move.
+			// This check is needed when the user clicks on an opponent's piece to take it.
+			var space = game.spaceElements.eq(pieceObj.space.left + pieceObj.space.top * 8);
+			if (space.hasClass("availableSpace") || space.hasClass("availableTake")) {
+				game.movePiece(space.get(0));
+				return;
+			}
+			
+			// If the user clicked on the other player's piece, just exit.
+			if (pieceObj.color !== game.turn)
+				return;
+			
+			// Note the current game piece.
+			game.curPiece = pieceObj;
+			
+			// Clear any current available space colors.
+			$(".availableSpace").removeClass("availableSpace");
+			$(".availableTake").removeClass("availableTake");
+			
+			// Note the available spaces.
+			$.each(Chess.getPieceMoves({pieces : game.pieces, spaces : game.spaces}, pieceObj), function(index, move) {
+				// Color available spaces for the user so they know where they can move.
+				game.spaceElements.eq(move.left + move.top * 8).addClass(
+					move.status === "available" ? "availableSpace" : "availableTake");
+			});
+		});
+		
+		// If the white player is the computer, start the game with the first move.
+		if (game.players.white !== "Human")
+			game.computerMove();
+		
+		$("#board").css("margin-left", function() {
+			return ($(window).width() - $(this).width()) / 2 - 100;
+		});
+	},
+	
+	/*
+		Creates a chess piece DOM element and returns it.
+	*/
+	createPiece : function(type, color) {
+		// Generate random, unused, id.
+		var id;
+		while (!id || document.getElementById(id))
+			id = ("piece" + Math.random()).replace(".", "");
+		
+		// Find image for this chess piece.
+		var image;
+		for (var prop in Chess.pieceTypes) {
+			if (Chess.pieceTypes[prop] === type)
+				image = prop;
+		}
+		
+		// Add and return the chess piece DOM element.
+		return $("<div>", {
+			id : id,
+			"class" : "piece " + image + "-" + color + " " + color + (type === Chess.pieceTypes.pawn ? " pawn" : ""),
+			title : image
+		});
+	},
+	
+	/*
+		Moves a piece on the screen.
+		
+		destination: the DOM element of the space to which the piece should be moved.
+	*/
+	movePiece : function(destination) {
+		// Clear any current available space colors.
+		$(".availableSpace").removeClass("availableSpace");
+		$(".availableTake").removeClass("availableTake");
+		
+		// If the evaluations list is on screen, remove it.
+		$("#Evaluations").remove();
+		
+		// The left / top coordinates of the destination space.
+		var spaceIndex = $(".space").index(destination),
+			space = {
+				left : spaceIndex % 8,
+				top : Math.floor(spaceIndex / 8)
+			};
+		
+		// If taking an opponent's piece, remove it from the game.
+		var oppPiece = $(game.pieces).filter(function() {
+			return this.space.left === space.left && this.space.top === space.top;
+		}).get(0);
+		if (oppPiece) {
+			// Remove the piece element from the page.
+			$("#" + oppPiece.id).remove();
+			
+			// Remove the piece from game memory.
+			game.pieces.splice(game.pieces.indexOf(oppPiece), 1);
+		}
+		
+		// If castling...
+		if (game.curPiece.type === Chess.pieceTypes.king && Math.abs(game.curPiece.space.left - space.left) > 1) {
+			// The column of the castling rook.
+			var rookLeft = space.left === 2 ? 0 : 7;
+			
+			// The left space to which the rook should move.
+			var rookMoveLeft = space.left === 2 ? 3 : 5;
+			
+			// Find the rook.
+			var rook = $(game.pieces).filter(function() {
+				return this.type === Chess.pieceTypes.rook &&
+					this.color === game.curPiece.color &&
+					this.space.left === rookLeft;
+			}).get(0);
+			
+			// Update the rook in memory.
+			game.spaces[rook.space.left][rook.space.top] = false;
+			game.spaces[rookMoveLeft][rook.space.top] = rook;
+			rook.space.left = rookMoveLeft;
+			rook.moved = true;
+			
+			// Move the rook on screen.
+			$("#" + rook.id).animate({
+				left : rookMoveLeft * 100
+			});
+		}
+		
+		// Move to the new space (in memory).
+		game.spaces[game.curPiece.space.left][game.curPiece.space.top] = false;
+		game.spaces[space.left][space.top] = game.curPiece;
+		game.curPiece.space = {
+			left : space.left,
+			top : space.top
+		};
+		
+		// If a pawn that has moved to the back row, upgrade it.
+		if (game.curPiece.type === Chess.pieceTypes.pawn &&
+			((game.turn === "white" && space.top === 0) ||
+			 (game.turn === "black" && space.top === 7))) {
+			
+			game.curPiece.type = Chess.pieceTypes.queen;
+			$("#" + game.curPiece.id)
+				.attr("title", "queen")
+				.css("background-image", "url('" + game.curPiece.color + " queen.png')");
+		}
+		
+		// Add this move to the game moves array.
+		game.moves.push($("#board").html());
+		
+		// Switch whose turn it is.
+		game.turn = game.turn === "white" ? "black" : "white";
+		
+		// Determine if the opponent's king is in check.
+		var gameStatus = Chess.getGameStatus({pieces : game.pieces, spaces : game.spaces}, game.turn);
+		
+		// Record that the piece has been moved.
+		game.curPiece.moved = true;
+		
+		// Update the game engine's score evaluation.
+		var score,
+			evalEngine;
+		if (game.players[game.turn].getScore)
+			evalEngine = game.players[game.turn];
+		else if (game.players[game.turn === "white" ? "black" : "white"].getScore)
+			evalEngine = game.players[game.turn === "white" ? "black" : "white"];
+		else
+			evalEngine = EasyEngine;
+		score = evalEngine.getScore({pieces : game.pieces, spaces : game.spaces}, game.turn);
+		$("#Score").html("Score: " + (Math.round(score * 100) / 100));
+		
+		// Add move to the scoresheet.
+		var moveText;
+		if (rookLeft !== undefined)
+			moveText = space.left === 2 ? "0-0-0" : "0-0";
+		else
+			moveText = String.fromCharCode(space.left + 97) + (8 - space.top);
+		if (game.turn === "white")
+			$("td", "#Scoresheet").last().html(moveText);
+		else {
+			$("tbody", "#Scoresheet").append("<tr><td>" + Math.ceil(game.moves.length / 2) +
+				"</td><td>" + moveText + "</td><td></td></tr>");
+		}
+		
+		// Move the piece on-screen.
+		setTimeout(function() {
+			$("#" + game.curPiece.id).animate({
+				left : space.left * 100,
+				top : space.top * 100
+			}, function() {
+				// If it's now the computer's turn and the game's still active, move.
+				if (game.players[game.turn] !== "Human" && (gameStatus === "ready" || gameStatus === "check"))
+					game.computerMove();
+				
+				// If the game's over, let the user know.
+				if (gameStatus !== "ready" && gameStatus !== "check") {
+					alert(gameStatus);
+				}
+			});
+		}, 0);
+		
+		// If the other player is a human, flip the board to their perspective.
+		if (game.players[game.turn] === "Human") {
+			$("#board").attr("class", "board" + (game.turn === "black" ? " flipped" : "")).animate({
+				transform : "rotate(" + (game.turn === "white" ? "0" : "180") + ")"
+			}, 0);
+		}
+		
+		// If the user wants to see the # of attacks on the board.
+		if (game.options.showAttackValues)
+			game.updateAttacks();
+	},
+	
+	/*
+		Updates the display of the # of attacks for each side for each square.
+	*/
+	updateAttacks : function() {
+		var attacks = Chess.findAttacks({pieces : game.pieces, spaces : game.spaces});
+		
+		$(".space").html(function(index) {
+			var attack = attacks[index % 8][Math.floor(index / 8)];
+			
+			return attack.whiteAttacks + " / " + attack.blackAttacks;
+		});
+	},
+	
+	/*
+		Makes a computer move.
+	*/
+	computerMove : function() {
+		// Request the computer move from the game engine.
+		var move = game.players[game.turn].getMove({
+			pieces : game.pieces,
+			lastMoved : game.curPiece,
+			spaces : game.spaces
+		}, game.turn);
+		
+		// If no move found, exit.
+		if (move) {
+			game.curPiece = move.piece;
+			game.movePiece($(".space").get(move.left + move.top * 8));
+		}
+	},
+	
+	/*
+		Gets the piece name, given its enumerated piece type.
+	*/
+	getPieceName : function(pieceType) {
+		for (var prop in Chess.pieceTypes) {
+			if (pieceType === Chess.pieceTypes[prop]) {
+				return prop;
+			}
+		}
+	}
+};
+
+/*
+	Page load event handler; sets up the game control panel at upper-right and starts a new game by default.
+*/
+$(function() {
+	// Game control panel.
+	var controlPanel = $("<div>", {
+		id : "ControlPanel"
+	}).appendTo(document.body);
+	
+	// Player type dropdowns.
+	$.each(["White", "Black"], function(index, color) {
+		$("<label>", {
+			"for" : "dd" + color,
+			html : color
+		}).appendTo(controlPanel);
+		
+		var dd = $("<select>", {
+			id : "dd" + color,
+			html : "<option value='Human'>Human</option>",
+			val : color === "White" ? "Human" : "Computer"
+		}).appendTo(controlPanel);
+		
+		for (var engine in engines) {
+			$("<option>", {
+				val : engine,
+				html : engine
+			}).appendTo(dd);
+		}
+		
+		if (color === "Black")
+			dd.val("Easy");
+		
+		$("<br>").appendTo(controlPanel);
+	});
+	
+	// Options checkboxes.
+	$.each(["Show Attack Values"], function(index, cbLabel) {
+		var id = "cb" + cbLabel.replaceAll(" ", "");
+		
+		$("<input>", {
+			type : "checkbox",
+			id : id,
+			val : "Yes"
+		}).appendTo(controlPanel);
+		
+		$("<label>", {
+			"for" : id,
+			html : cbLabel
+		}).appendTo(controlPanel);
+		
+		$("<br>").appendTo(controlPanel);
+	});
+	
+	// Game score.
+	$("<label>", {
+		id : "Score",
+		css : {
+			display : "block"
+		}
+	}).appendTo(controlPanel);
+	
+	// New game button.
+	$("<input>", {
+		type : "button",
+		val : "New Game",
+		click : game.start
+	}).appendTo(controlPanel);
+	
+	// Hint button.
+	$("<input>", {
+		type : "button",
+		val : "Hint",
+		click : function() {
+			var moves = game.players[game.turn === "white" ? "black" : "white"].evaluateAllmoves({
+				pieces : game.pieces,
+				lastMoved : game.curPiece,
+				spaces : game.spaces
+			}, game.turn).moveEvaluations;
+			
+			var table = $("<table>", {
+				id : "Evaluations"
+			}).appendTo(document.body);
+			
+			$.each(moves, function(index, move) {
+				$("<tr>", {
+					html : "<td>" + move.move + "</td><td>" + move.score + "</td>"
+				}).appendTo(table);
+			});
+		}
+	}).appendTo(controlPanel);
+	
+	// Add the scoresheet.
+	$("<table>", {
+		id : "Scoresheet"
+	}).appendTo(document.body).wrap("<div id='ScoresheetBox'></div>");
+	
+	// Start a new game.
+	game.start();
+	
+	// Whenever a user clicks on an available space (which are created when the user picks a piece),
+	// move the piece on screen.
+	$(document.body).on("click", ".availableSpace, .availableTake", function() {
+		game.movePiece(this);
+	});
+	
+	// "Show Attack Values" checkbox change event.
+	$("#cbShowAttackValues").change(function() {
+		game.options.showAttackValues = this.checked;
+		
+		if (game.options.showAttackValues)
+			game.updateAttacks();
+		else
+			$(".space").html("");
+	});
+	
+	// Show moves when the user uses the mouse wheel over the board.
+	$(document.body).on("mousewheel", ".board", function(event) {
+		// Mouse wheel up or down?
+		// Up moves forward through the moves; down backwards.
+		var up = event.originalEvent.wheelDelta > 0 ? true : false;
+		
+		// We're showing the last move, if not yet adjusted.
+		if (game.moveShownIndex === null)
+			game.moveShownIndex = game.moves.length - 1;
+		
+		// If a valid move index.
+		if ((game.moveShownIndex + (up ? 1 : -1)) >= 0 &&
+			(game.moveShownIndex + (up ? 1 : -1)) <= game.moves.length) {
+			
+			$(".activeMove").removeClass("activeMove");
+			$(".pastMove").remove();
+			
+			if ((game.moveShownIndex + (up ? 1 : -1)) == game.moves.length) {
+				game.moveShownIndex = null;
+				$("#board").show();
+				return;
+			}
+			
+			// Show the move.
+			var moveBoardHtml = game.moves[game.moveShownIndex];
+			$("#board").hide();
+			$("<div>", {
+				"class" : "board pastMove",
+				html : moveBoardHtml
+			}).appendTo(document.body);
+			$("td:not(:first-child)", "#Scoresheet").eq(game.moveShownIndex - 1).addClass("activeMove");
+			
+			// Adjust the game move index.
+			game.moveShownIndex += up ? 1 : -1;
+		}
+	});
+});
+
+/// <reference path="jquery dev.js" />
+
+/*
+	Available chess engines.
+*/
+
+/*
+	A chess engine that randomly selects its move.
+*/
+var RandomEngine = {
+	/*
+		Gets the computer's move, given the board and the computer's color (white or black).
+	*/
+	getMove : function(board, color) {
+		var allPossibleMoves = Chess.getAllPossibleMoves(board, color);
+		
+		// If there are moves possible...
+		if (allPossibleMoves.length > 0)
+			return allPossibleMoves.random();
+	},
+	
+	/*
+		Gets the game score.
+	*/
+	getScore : function(board, color) {
+		// Always even...
+		return 0;
+	}
+};
+
+var EasyEngine = {
+	/*
+		Evaluates all moves, returning a list of all possible moves, sorted by order of
+		preference (best first), with the resulting game scores.
+	*/
+	evaluateAllmoves : function(board, color) {
+		var allPossibleMoves = Chess.getAllPossibleMoves(board, color),
+			moveEvaluations,
+			bestMoves = [],
+			bestScore = color === "white" ? -50 : 50;
+		
+		// For each legal move...
+		$.each(allPossibleMoves, function(index, possibleMove) {
+			// Make the move in memory, and grab the opponent's possible moves.
+			var postMoveBoard = Chess.copyAndMove(board, possibleMove.piece, {top : possibleMove.top, left : possibleMove.left}),
+				oppMoves = Chess.getAllPossibleMoves(postMoveBoard, color === "white" ? "black" : "white"),
+				bestOppScore = color === "white" ? 50 : -50;
+			
+			// For each of the opponent's possible moves...
+			$.each(oppMoves, function(index, move) {
+				// Make the opponent's move in memory and evaluate the board.
+				var afterBoard = Chess.copyAndMove(postMoveBoard, move.piece, {top : move.top, left : move.left}),
+					score = EasyEngine.getScore(afterBoard, color);
+				
+				// If this is the best possible move for the opponent so far, note the fact.
+				if ((color === "white" && score < bestOppScore) ||
+					(color === "black" && score > bestOppScore)) {
+					bestOppScore = score;
+				}
+			});
+			
+			// Note the potential move's oppenent's best response score.
+			possibleMove.bestOppScore = bestOppScore;
+			
+			// If this move is the best move so far, note the fact.
+			if ((color === "white" && bestOppScore >= bestScore) ||
+				(color === "black" && bestOppScore <= bestScore)) {
+				if (bestOppScore === bestScore)
+					bestMoves.push(possibleMove);
+				else {
+					bestScore = bestOppScore;
+					bestMoves = [possibleMove];
+				}
+			}
+		});
+		
+		// Sort possible moves in preferential order (best first).
+		allPossibleMoves.sort(function(a, b) {
+			if (a.bestOppScore === b.bestOppScore)
+				return 0;
+			else
+				return (a.bestOppScore < b.bestOppScore ? -1 : 1) * (color === "white" ? -1 : 1);
+		});
+		
+		// Note all moves' evaluation scores.
+		moveEvaluations = $(allPossibleMoves).map(function() {
+			var moveText = String.fromCharCode(this.left + 97) + (8 - this.top);
+			
+			return {
+				move : game.getPieceName(this.piece.type) + " to " + moveText,
+				score : (Math.floor(this.bestOppScore * 100) / 100)
+			};
+		}).toArray();
+		
+		return {
+			bestMoves : bestMoves,
+			allPossibleMoves : allPossibleMoves,
+			moveEvaluations : moveEvaluations
+		};
+	},
+	
+	/*
+		Gets the computer's move, given the board and the computer's color (white or black).
+	*/
+	getMove : function(board, color) {
+		return EasyEngine.evaluateAllmoves(board, color).bestMoves.random();
+		
+		// Return the optimum move (randomly picking one if there is multiple moves are of equal value).
+		// return EasyEngine.evaluateAllmoves(board, color).bestMoves.random();
+	},
+	
+	/*
+		Gets the game score.
+	*/
+	getScore : function(board, color) {
+		var score = {
+			white : {
+				material : 0,
+				space : 0
+			},
+			black : {
+				material : 0,
+				space : 0
+			}
+		};
+		
+		// Evaluate each piece...
+		$.each(board.pieces, function(index, piece) {
+			// Add material score.
+			switch (piece.type) {
+				case Chess.pieceTypes.pawn:
+					score[piece.color].material++; break;
+				
+				case Chess.pieceTypes.bishop:
+				case Chess.pieceTypes.knight:
+					score[piece.color].material += 3; break;
+				
+				case Chess.pieceTypes.rook:
+					score[piece.color].material += 5; break;
+				
+				case Chess.pieceTypes.queen:
+					score[piece.color].material += 9; break;
+			}
+		});
+		
+		// Get all board spaces' attack counts.
+		var attacks = Chess.findAttacks(board);
+		
+		// Add up the space scores.
+		for (var left = 0; left < 8; left++) {
+			for (var top = 0; top < 8; top++) {
+				var spaceAttack = attacks[left][top],
+					spaceValue = 8 - Math.floor(Math.abs(left - 3.5)) - Math.floor(Math.abs(top - 3.5));
+				
+				if (spaceAttack.whiteAttacks > spaceAttack.blackAttacks)
+					score.white.space += spaceValue * (spaceAttack.blackAttacks === 0 ? 3 : 1);
+				else if (spaceAttack.blackAttacks > spaceAttack.whiteAttacks)
+					score.black.space += spaceValue * (spaceAttack.whiteAttacks === 0 ? 3 : 1);
+			}
+		}
+		
+		// Return calculated game score.
+		return 10 * (score.white.material / score.black.material - 1) +
+					(score.white.space / score.black.space - 1);
+	}
+};
+
+var SmarterEngine = {
+	/*
+		Gets the computer's move, given the board and the computer's color (white or black).
+	*/
+	getMove : function(board, color) {
+		var allPossibleMoves = Chess.getAllPossibleMoves(board, color),
+			bestMoves = [],
+			bestScore = color === "white" ? -50 : 50;
+		
+		// For each legal move...
+		$.each(allPossibleMoves, function(index, possibleMove) {
+			// Make the move in memory, and grab the opponent's possible moves.
+			var postMoveBoard = Chess.copyAndMove(board, possibleMove.piece, {top : possibleMove.top, left : possibleMove.left}),
+				oppMoves = Chess.getAllPossibleMoves(postMoveBoard, color === "white" ? "black" : "white"),
+				bestOppScore = color === "white" ? 50 : -50;
+			
+			// For each of the opponent's possible moves...
+			$.each(oppMoves, function(index, move) {
+				// Make the opponent's move in memory and evaluate the board.
+				var afterBoard = Chess.copyAndMove(postMoveBoard, move.piece, {top : move.top, left : move.left}),
+					score = SmarterEngine.getScore(afterBoard, color);
+				
+				// If this is the best possible move for the opponent so far, note the fact.
+				if ((color === "white" && score < bestOppScore) ||
+					(color === "black" && score > bestOppScore)) {
+					bestOppScore = score;
+				}
+			});
+			
+			// Note the potential move's oppenent's best response score.
+			possibleMove.bestOppScore = bestOppScore;
+			
+			// If this move is the best move so far, note the fact.
+			if ((color === "white" && bestOppScore >= bestScore) ||
+				(color === "black" && bestOppScore <= bestScore)) {
+				if (bestOppScore === bestScore)
+					bestMoves.push(possibleMove);
+				else {
+					bestScore = bestOppScore;
+					bestMoves = [possibleMove];
+				}
+			}
+		});
+		
+		// Return the optimum move (randomly picking one if there is multiple moves are of equal value).
+		return bestMoves.random();
+	},
+	
+	/*
+		Gets the game score.
+	*/
+	getScore : function(board, color) {
+		var score = {
+			white : {
+				material : 0,
+				space : 0,
+				development : 0
+			},
+			black : {
+				material : 0,
+				space : 0,
+				development : 0
+			}
+		};
+		
+		// Evaluate each piece...
+		$.each(board.pieces, function(index, piece) {
+			// Add material score.
+			switch (piece.type) {
+				case Chess.pieceTypes.pawn:
+					score[piece.color].material++;
+					break;
+				
+				case Chess.pieceTypes.bishop:
+				case Chess.pieceTypes.knight:
+					score[piece.color].material += 3;
+					if (piece.moved)
+						score[piece.color].development += 3;
+					break;
+				
+				case Chess.pieceTypes.rook:
+					score[piece.color].material += 5;
+					break;
+				
+				case Chess.pieceTypes.queen:
+					score[piece.color].material += 9;
+					if (piece.moved)
+						score[piece.color].development += .5;
+					break;
+			}
+		});
+		
+		// Get all board spaces' attack counts.
+		var attacks = Chess.findAttacks(board);
+		
+		// Add up the space scores.
+		for (var left = 0; left < 8; left++) {
+			for (var top = 0; top < 8; top++) {
+				var spaceAttack = attacks[left][top],
+					spaceValue = 8 - Math.floor(Math.abs(left - 3.5)) - Math.floor(Math.abs(top - 3.5));
+				
+				if (spaceAttack.whiteAttacks > spaceAttack.blackAttacks)
+					score.white.space += spaceValue * (spaceAttack.blackAttacks === 0 ? 3 : 1);
+				else if (spaceAttack.blackAttacks > spaceAttack.whiteAttacks)
+					score.black.space += spaceValue * (spaceAttack.whiteAttacks === 0 ? 3 : 1);
+			}
+		}
+		
+		// Return calculated game score.
+		return 10 * (score.white.material / score.black.material - 1) +
+					(score.white.space / score.black.space - 1) +
+					(score.white.development / score.black.development - 1);
+	}
+};
+
+/*
+	Analyzes four plys to determine its move.
+	Not in use since it's slow.
+*/
+var TwoMoves = {
+	getMove : function(board, color) {
+		var allPossibleMoves = Chess.getAllPossibleMoves(board, color),
+			bestMove,
+			bestScore = color === "white" ? -50 : 50,
+			oppColor = color === "white" ? "black" : "white";
+		
+		// For each legal move...
+		$.each(allPossibleMoves, function(index, possibleMove) {
+			// Make the move in memory, and grab the opponent's possible moves.
+			var postMoveBoard = Chess.copyAndMove(board, possibleMove.piece, {top : possibleMove.top, left : possibleMove.left}),
+				oppMoves = Chess.getAllPossibleMoves(postMoveBoard, oppColor),
+				bestOppScore = color === "white" ? 50 : -50;
+			
+			$.each(oppMoves, function(index, oppMove) {
+				// Make opponent move in memory and evaluate board score.
+				oppMove.boardAfterMove = Chess.copyAndMove(postMoveBoard, oppMove.piece, {top : oppMove.top, left : oppMove.left});
+				oppMove.score = TwoMoves.getScore(oppMove.boardAfterMove, color);
+			});
+			
+			// Sort potential opponent moves by score (ascending order).
+			oppMoves.sort(function(a, b) {
+				return a.score === b.score ? 0 :
+					a.score < b.score ? -1 : 1;
+			});
+			
+			// Cut off half the options to just those best for the computer's color.
+			if (color === "black")
+				oppMoves.splice(oppMoves.length * 0.2);
+			else
+				oppMoves = oppMoves.splice(oppMoves.length * 0.2);
+			
+			// For each of the opponent's possible moves...
+			$.each(oppMoves, function(index, oppMove) {
+				// Make the user's next move in memory.
+				var afterBoard = oppMove.boardAfterMove,
+					myMoves = Chess.getAllPossibleMoves(afterBoard, color);
+				
+				$.each(myMoves, function(index, myMove) {
+					var afterMyNextMove = Chess.copyAndMove(afterBoard, myMove.piece, {top : myMove.top, left : myMove.left}),
+						oppMoves = Chess.getAllPossibleMoves(afterMyNextMove, oppColor);
+					
+					$.each(oppMoves, function(index, oppMove) {
+						// Make the opponent's move in memory and evaluate the board.
+						var afterOpp2ndMove = Chess.copyAndMove(afterMyNextMove, oppMove.piece, {top : oppMove.top, left : oppMove.left}),
+							score = SmarterEngine.getScore(afterOpp2ndMove, color);
+						
+						// If this is the best possible move for the opponent so far, note the fact.
+						if ((color === "white" && score < bestOppScore) ||
+							(color === "black" && score > bestOppScore)) {
+							bestOppScore = score;
+						}
+					});
+				});
+			});
+			
+			// Note the potential move's oppenent's best response score.
+			possibleMove.bestOppScore = bestOppScore;
+			
+			// If this move is the best move so far, note the fact.
+			if ((color === "white" && bestOppScore > bestScore) ||
+				(color === "black" && bestOppScore < bestScore)) {
+				bestScore = bestOppScore;
+				bestMove = possibleMove;
+			}
+		});
+		
+		// Return the optimum move.
+		return bestMove;
+	},
+	
+	getScore : EasyEngine.getScore
+};
+
+var engines = {
+	Easy : EasyEngine,
+	Random : RandomEngine,
+	Smarter : SmarterEngine,
+	TwoMoves : TwoMoves
+};
